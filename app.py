@@ -44,6 +44,7 @@ def get_db_connection():
             user=username,
             password=password
         )
+        # log("Connected to MySQL")
         return connection
     except Error as e:
         return None
