@@ -133,7 +133,7 @@ def build_model():
     joblib.dump(scaler_y, SCALER_Y_PATH)
 
     end_time = time.time()
-    
+
     logging.info("Model built successfully", "loss:", loss, "mae:", mae)
     logging.info(f"Time taken: {end_time - start_time} seconds")
 
@@ -149,6 +149,7 @@ scheduler.start()
 
 @app.route('/', methods=['GET'])
 def index():
+    logging.info("Hello world!")
     return "Hello world!"
 
 # Endpoint để dự đoán
