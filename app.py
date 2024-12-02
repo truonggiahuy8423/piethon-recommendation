@@ -27,16 +27,16 @@ def build_model():
     api_key = "your_secret_api_key"
 
     # Kết nối và thu thập dữ liệu từ MySQL
-    host = "127.0.0.1"
-    port = "3308"
-    database = "course"
-    username = "root"
-    password = "password"
-    # host = "coursedb.mysql.database.azure.com"
-    # port = "3306"
+    # host = "127.0.0.1"
+    # port = "3308"
     # database = "course"
-    # username = "courseuser"
-    # password = "123456aA@"
+    # username = "root"
+    # password = "password"
+    host = "coursedb.mysql.database.azure.com"
+    port = "3306"
+    database = "course"
+    username = "courseuser"
+    password = "123456aA@"
 
     try:
         connection = mysql.connector.connect(
