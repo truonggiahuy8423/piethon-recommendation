@@ -203,6 +203,9 @@ if __name__ == '__main__':
     if not os.path.exists(DATA_PATH):
         raise FileNotFoundError(f"Excel file not found at {DATA_PATH}. Please upload it.")
 
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Starting the app...")
+
     start_building_model()
 
     app.run(host='0.0.0.0', port=8000, debug=True)
