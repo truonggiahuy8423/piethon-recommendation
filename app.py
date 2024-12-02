@@ -3,6 +3,9 @@ import pandas as pd
 import os
 import numpy as np
 from tensorflow.keras.models import load_model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.optimizers import Adam
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 import mysql.connector
@@ -11,6 +14,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import time
 import logging
 
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = '0'
 
 app = Flask(__name__)
 
@@ -35,6 +39,8 @@ def get_db_connection():
     # database = "course"
     # username = "root"
     # password = "password"
+
+    print("Starting the app...")
     
     try:
         connection = mysql.connector.connect(
@@ -44,9 +50,10 @@ def get_db_connection():
             user=username,
             password=password
         )
-        log("Connected to MySQL")
+        # log("Connected to MySQL")
         return connection
     except Error as e:
+        print(f"Error connecting to MySQL on Azure: {e}")  # Log vào terminal
         return None
 
 
@@ -89,7 +96,7 @@ def build_model():
 
         # Đếm số dòng cho mỗi user_id và lọc user_id có ít nhất 10 dòng
         user_counts = data["user_id"].value_counts()
-        valid_user_ids = user_counts[user_counts >= 10].index
+        valid_user_ids = user_counts[user_counts >= PREVIOUS+PREDICT].index
         filtered_df = data[data["user_id"].isin(valid_user_ids)]
 
         # Lấy danh sách course_id và tạo input-output
@@ -102,6 +109,8 @@ def build_model():
 
         df_output = pd.DataFrame(rows, columns=[f"col_{i+1}" for i in range(window_size)])
         df_output.columns = [f"input_{i+1}" for i in range(PREVIOUS)] + [f"output_{i+1}" for i in range(PREDICT)]
+
+        print(df_output)
 
         # Tách input và output
         X = df_output.iloc[:, :PREVIOUS].values
@@ -133,9 +142,6 @@ def build_model():
     X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
 
     # Xây dựng mô hình LSTM
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import LSTM, Dense
-    from tensorflow.keras.optimizers import Adam
 
     model = Sequential([
         LSTM(50, activation='relu', input_shape=(X_train.shape[1], 1)),
@@ -224,12 +230,9 @@ def predict():
     return jsonify({"prediction": predicted.tolist()[0]})
 
 if __name__ == '__main__':
-    # Kiểm tra file dữ liệu tồn tại
-    if not os.path.exists(DATA_PATH):
-        raise FileNotFoundError(f"Excel file not found at {DATA_PATH}. Please upload it.")
-
     logging.basicConfig(level=logging.INFO)
     log("Starting the app...")
+    print("Starting the app...")
 
     start_building_model()
 
