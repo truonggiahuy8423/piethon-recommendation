@@ -44,7 +44,7 @@ def get_db_connection():
             user=username,
             password=password
         )
-        # log("Connected to MySQL")
+        log("Connected to MySQL")
         return connection
     except Error as e:
         return None
@@ -174,8 +174,8 @@ scheduler.start()
 
 @app.route('/', methods=['GET'])
 def index():
-    log("Hello world!")
-    return "Hello world!"
+    log("Hello world !!!!")
+    return "Hello world!!!!"
 
 # Endpoint để dự đoán
 @app.route('/predict', methods=['POST'])
