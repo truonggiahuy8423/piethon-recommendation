@@ -22,24 +22,14 @@ SCALER_Y_PATH = "scaler_y.pkl"
 PREVIOUS = 5
 PREDICT = 5
 
-# Hàm để build lại mô hình
-def build_model():
-    start_time = time.time()  # Thời gian bắt đầu
-    # Lấy apiKey từ query parameters
-    api_key = "your_secret_api_key"
-
-    # Kết nối và thu thập dữ liệu từ MySQL
-    # host = "127.0.0.1"
-    # port = "3308"
-    # database = "course"
-    # username = "root"
-    # password = "password"
-    host = "coursedb.mysql.database.azure.com"
-    port = "3306"
+# Hàm kết nối với MySQL
+def get_db_connection():
+    host = "127.0.0.1"
+    port = "3308"
     database = "course"
-    username = "courseuser"
-    password = "123456aA@"
-
+    username = "root"
+    password = "password"
+    
     try:
         connection = mysql.connector.connect(
             host=host,
@@ -48,48 +38,76 @@ def build_model():
             user=username,
             password=password
         )
+        return connection
+    except Error as e:
+        return None
 
-        if connection.is_connected():
-            print("Connected to MySQL database")
 
-            # Thực hiện truy vấn
-            query = "SELECT * FROM history_view ORDER BY user_id ASC, history_id ASC"
+# Hàm log vào MySQL
+def log(message, level="INFO"):
+    try:
+        connection = get_db_connection()
+        if connection is not None:
             cursor = connection.cursor()
-            cursor.execute(query)
+            query = "INSERT INTO `log` (`log`, `time`) VALUES (%s, NOW())"
+            cursor.execute(query, (f"{level}: {message}",))
+            connection.commit()
+            cursor.close()
+            connection.close()
+    except Error as e:
+        print(f"Error logging message: {e}")
 
-            # Lấy dữ liệu và chuyển đổi thành DataFrame
-            columns = [desc[0] for desc in cursor.description]
-            rows = cursor.fetchall()
-            data = pd.DataFrame(rows, columns=columns)
 
-            # Đếm số dòng cho mỗi user_id và lọc user_id có ít nhất 10 dòng
-            user_counts = data["user_id"].value_counts()
-            valid_user_ids = user_counts[user_counts >= 10].index
-            filtered_df = data[data["user_id"].isin(valid_user_ids)]
+# Hàm để build lại mô hình
+def build_model():
+    start_time = time.time()  # Thời gian bắt đầu
+    log("Building model...")
 
-            # Lấy danh sách course_id và tạo input-output
-            course_ids = filtered_df["course_id"].tolist()
-            window_size = PREVIOUS + PREDICT
-            rows = [
-                course_ids[i : i + window_size]
-                for i in range(len(course_ids) - window_size + 1)
-            ]
+    # Kết nối và thu thập dữ liệu từ MySQL
+    connection = get_db_connection()
+    if connection is None:
+        log("Failed to connect to database", "ERROR")
+        return
 
-            df_output = pd.DataFrame(rows, columns=[f"col_{i+1}" for i in range(window_size)])
-            df_output.columns = [f"input_{i+1}" for i in range(PREVIOUS)] + [f"output_{i+1}" for i in range(PREDICT)]
+    try:
+        # Thực hiện truy vấn
+        query = "SELECT * FROM history_view ORDER BY user_id ASC, history_id ASC"
+        cursor = connection.cursor()
+        cursor.execute(query)
 
-            # Tách input và output
-            X = df_output.iloc[:, :PREVIOUS].values
-            y = df_output.iloc[:, PREVIOUS:].values
+        # Lấy dữ liệu và chuyển đổi thành DataFrame
+        columns = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchall()
+        data = pd.DataFrame(rows, columns=columns)
+
+        # Đếm số dòng cho mỗi user_id và lọc user_id có ít nhất 10 dòng
+        user_counts = data["user_id"].value_counts()
+        valid_user_ids = user_counts[user_counts >= 10].index
+        filtered_df = data[data["user_id"].isin(valid_user_ids)]
+
+        # Lấy danh sách course_id và tạo input-output
+        course_ids = filtered_df["course_id"].tolist()
+        window_size = PREVIOUS + PREDICT
+        rows = [
+            course_ids[i : i + window_size]
+            for i in range(len(course_ids) - window_size + 1)
+        ]
+
+        df_output = pd.DataFrame(rows, columns=[f"col_{i+1}" for i in range(window_size)])
+        df_output.columns = [f"input_{i+1}" for i in range(PREVIOUS)] + [f"output_{i+1}" for i in range(PREDICT)]
+
+        # Tách input và output
+        X = df_output.iloc[:, :PREVIOUS].values
+        y = df_output.iloc[:, PREVIOUS:].values
 
     except Error as e:
-        print(f"Database connection failed: {str(e)}")
+        log(f"Database connection failed: {str(e)}", "ERROR")
         return
     finally:
         if connection.is_connected():
             cursor.close()
             connection.close()
-            print("MySQL connection closed")
+            log("MySQL connection closed")
 
     # Chuẩn hóa dữ liệu
     global scaler_X, scaler_y
@@ -134,12 +152,12 @@ def build_model():
 
     end_time = time.time()
 
-    logging.info("Model built successfully", "loss:", loss, "mae:", mae)
-    logging.info(f"Time taken: {end_time - start_time} seconds")
+    log(f"Model built successfully, loss: {loss}, mae: {mae}", "INFO")
+    log(f"Time taken: {end_time - start_time} seconds", "INFO")
 
 # Hàm khởi động build mô hình khi Flask bắt đầu
 def start_building_model():
-    print("Building model on startup...")
+    log("Building model on startup...")
     build_model()
 
 # Thiết lập scheduler để tự động build mô hình sau mỗi 30 phút
@@ -149,7 +167,7 @@ scheduler.start()
 
 @app.route('/', methods=['GET'])
 def index():
-    logging.info("Hello world!")
+    log("Hello world!")
     return "Hello world!"
 
 # Endpoint để dự đoán
@@ -204,8 +222,8 @@ if __name__ == '__main__':
         raise FileNotFoundError(f"Excel file not found at {DATA_PATH}. Please upload it.")
 
     logging.basicConfig(level=logging.INFO)
-    logging.info("Starting the app...")
+    log("Starting the app...")
 
     start_building_model()
 
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
