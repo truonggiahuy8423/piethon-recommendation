@@ -24,11 +24,17 @@ PREDICT = 5
 
 # Hàm kết nối với MySQL
 def get_db_connection():
-    host = "127.0.0.1"
-    port = "3308"
+    host = "coursedb.mysql.database.azure.com"
+    port = "3306"
     database = "course"
-    username = "root"
-    password = "password"
+    username = "courseuser"
+    password = "123456aA@"
+
+    # host = "127.0.0.1"
+    # port = "3308"
+    # database = "course"
+    # username = "root"
+    # password = "password"
     
     try:
         connection = mysql.connector.connect(
