@@ -9,6 +9,8 @@ import mysql.connector
 from mysql.connector import Error
 from apscheduler.schedulers.background import BackgroundScheduler
 import time
+import logging
+
 
 app = Flask(__name__)
 
@@ -131,8 +133,9 @@ def build_model():
     joblib.dump(scaler_y, SCALER_Y_PATH)
 
     end_time = time.time()
-    print("Model built successfully", "loss:", loss, "mae:", mae)
-    print("Time taken:", end_time - start_time, "seconds")
+    
+    logging.info("Model built successfully", "loss:", loss, "mae:", mae)
+    logging.info(f"Time taken: {end_time - start_time} seconds")
 
 # Hàm khởi động build mô hình khi Flask bắt đầu
 def start_building_model():
