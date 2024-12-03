@@ -166,7 +166,7 @@ def build_model():
     end_time = time.time()
 
     log(f"Model built successfully, loss: {loss}, mae: {mae}", "INFO")
-    log(f"Time taken: {end_time - start_time} seconds", "INFO")
+    log(f"Time taken(CLoud): {end_time - start_time} seconds", "INFO")
 
 # Hàm khởi động build mô hình khi Flask bắt đầu
 def start_building_model():
@@ -175,7 +175,7 @@ def start_building_model():
 
 # Thiết lập scheduler để tự động build mô hình sau mỗi 30 phút
 scheduler = BackgroundScheduler()
-scheduler.add_job(start_building_model, 'interval', minutes=30)
+scheduler.add_job(start_building_model, 'interval', minutes=2)
 scheduler.start()
 
 @app.route('/', methods=['GET'])
